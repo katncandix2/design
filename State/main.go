@@ -4,60 +4,61 @@ import (
 	"fmt"
 )
 
-// State 接口定义了状态的行为
-type State interface {
-	Execute()
+// State 类型代表状态机中的状态
+type State string
+
+// Event 类型代表触发状态转换的事件
+type Event string
+
+// StateMachine 结构体表示状态机
+type StateMachine struct {
+	state       State
+	transitions map[State]map[Event]State
 }
 
-// StateMachine 接口定义了状态机的行为
-type StateMachine interface {
-	GetState() State
-	SetState(s State)
-	Execute()
+// NewStateMachine 创建并返回一个新的状态机实例
+func NewStateMachine(initialState State) *StateMachine {
+	return &StateMachine{
+		state:       initialState,
+		transitions: make(map[State]map[Event]State),
+	}
 }
 
-// ConcreteStateA 是 State 的一个具体状态实现
-type ConcreteStateA struct{}
-
-func (s *ConcreteStateA) Execute() {
-	fmt.Println("Executing state A")
+// AddTransition 用于添加状态转换规则
+func (sm *StateMachine) AddTransition(from State, event Event, to State) {
+	if sm.transitions[from] == nil {
+		sm.transitions[from] = make(map[Event]State)
+	}
+	sm.transitions[from][event] = to
 }
 
-// ConcreteStateB 是 State 的一个具体状态实现
-type ConcreteStateB struct{}
-
-func (s *ConcreteStateB) Execute() {
-	fmt.Println("Executing state B")
+// Transition 触发状态转换
+func (sm *StateMachine) Transition(event Event) {
+	if nextState, ok := sm.transitions[sm.state][event]; ok {
+		sm.state = nextState
+		fmt.Printf("Transitioned to %s\n", sm.state)
+	} else {
+		fmt.Printf("No transition for event %s from state %s\n", event, sm.state)
+	}
 }
 
-// ConcreteStateMachine 是 StateMachine 的一个具体实现
-type ConcreteStateMachine struct {
-	currentState State
-}
-
-func (sm *ConcreteStateMachine) GetState() State {
-	return sm.currentState
-}
-
-func (sm *ConcreteStateMachine) SetState(s State) {
-	sm.currentState = s
-}
-
-func (sm *ConcreteStateMachine) Execute() {
-	sm.currentState.Execute()
+// CurrentState 返回当前状态
+func (sm *StateMachine) CurrentState() State {
+	return sm.state
 }
 
 func main() {
-	stateMachine := &ConcreteStateMachine{}
+	sm := NewStateMachine("idle")
 
-	stateA := &ConcreteStateA{}
-	stateB := &ConcreteStateB{}
+	// 定义状态转换
+	sm.AddTransition("idle", "start", "running")
+	sm.AddTransition("running", "stop", "idle")
+	sm.AddTransition("running", "pause", "paused")
+	sm.AddTransition("paused", "resume", "running")
 
-	// 设置状态 A 并执行
-	stateMachine.SetState(stateA)
-	stateMachine.Execute()
-
-	// 设置状态 B 并执行
-	stateMachine.SetState(stateB)
-	stateMachine.Execute()
+	// 测试状态转换
+	sm.Transition("start")
+	sm.Transition("pause")
+	sm.Transition("resume")
+	sm.Transition("stop")
 }
